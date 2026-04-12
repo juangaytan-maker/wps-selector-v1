@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WPS Admin Panel</title>
+    <link rel="icon" href="icons/favicon.png" type="image/png">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-header { text-align: center; margin-bottom: 30px; padding: 20px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--accent); }
+        .admin-header h1 { color: var(--warning); margin: 0; }
+        .admin-header p { color: var(--muted); margin-top: 5px; }
+        .admin-container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: var(--bg-card); padding: 30px; border-radius: 12px; border: 2px solid var(--primary); text-align: center; max-width: 350px; width: 90%; }
+        .login-box input { margin: 15px 0; text-align: center; font-size: 1.1rem; }
+        #admin-dashboard { display: none; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: var(--bg-card); padding: 15px; border-radius: 8px; border-left: 4px solid var(--success); text-align: center; }
+        .stat-card.warning { border-left-color: var(--warning); }
+        .stat-card.error { border-left-color: var(--error); }
+        .stat-number { font-size: 2rem; font-weight: bold; color: var(--text); }
+        .stat-label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; }
+        .action-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .btn-generate { background: var(--success); color: #000; flex: 1; min-width: 200px; }
+        .btn-generate:hover { background: #00b8d4; }
+        .license-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: 8px; overflow: hidden; }
+        .license-table th, .license-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--input-border); }
+        .license-table th { background: rgba(0,0,0,0.3); color: var(--muted); font-size: 0.8rem; text-transform: uppercase; }
+        .license-table tr:hover { background: rgba(255,255,255,0.03); }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .status-active { background: rgba(0, 217, 255, 0.2); color: var(--success); }
+        .status-inactive { background: rgba(255, 77, 77, 0.2); color: var(--error); }
+        .action-btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 5px; transition: 0.2s; }
+        .btn-revoke { background: var(--error); color: white; }
+        .btn-activate { background: var(--success); color: #000; }
+        .btn-copy { background: var(--accent); color: white; }
+        .empty-state { text-align: center; padding: 40px; color: var(--muted); }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 400px; }
+        .toast { background: var(--bg-card); border-left: 4px solid var(--success); padding: 16px 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); display: flex; align-items: flex-start; gap: 12px; animation: slideInRight 0.3s ease; min-width: 300px; backdrop-filter: blur(10px); }
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--error); }
+        .toast.warning { border-left-color: var(--warning); }
+        .toast.info { border-left-color: var(--accent); }
+        .toast-icon { font-size: 1.5rem; line-height: 1; }
+        .toast-content { flex: 1; }
+        .toast-title { font-weight: bold; margin-bottom: 4px; color: var(--text); font-size: 0.95rem; }
+        .toast-message { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
+        .toast-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.2rem; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s; }
+        .toast-close:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        .toast.hiding { animation: slideOutRight 0.3s ease forwards; }
+    </style>
+</head>
+<body>
+
+<div id="toast-container" class="toast-container"></div>
+
+<div id="login-overlay">
+    <div class="login-box">
+        <div style="font-size: 3rem; margin-bottom: 10px;">🔐</div>
+        <h2 style="margin: 0; color: var(--text);">Admin Panel</h2>
+        <p style="color: var(--muted); margin: 5px 0 15px;">Acceso restringido</p>
+        <input type="password" id="admin-password" placeholder="Contraseña de administrador">
+        <button class="btn btn-search" onclick="verifyAdmin()">Ingresar</button>
+        <p id="login-error" style="color: var(--error); font-size: 0.85rem; margin-top: 10px; display: none;"></p>
+    </div>
+</div>
+
+<div id="admin-dashboard" class="admin-container">
+    <div class="admin-header">
+        <h1>🛠️ WPS Selector Admin</h1>
+        <p>Gestión de licencias y usuarios PRO</p>
+        <button class="btn btn-back" onclick="logoutAdmin()" style="width: auto; margin-top: 10px; padding: 8px 16px;">🚪 Cerrar Sesión</button>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-number" id="stat-total">0</div><div class="stat-label">Total Licencias</div></div>
+        <div class="stat-card warning"><div class="stat-number" id="stat-active">0</div><div class="stat-label">Activas</div></div>
+        <div class="stat-card error"><div class="stat-number" id="stat-inactive">0</div><div class="stat-label">Inactivas</div></div>
+    </div>
+
+    <div class="action-bar" style="flex-direction: column; gap: 12px;">
+        <div style="background: var(--bg-card); padding: 12px; border-radius: 8px; border: 1px solid var(--accent);">
+            <label style="display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.8rem;">📱 ID del Dispositivo (opcional)</label>
+            <input type="text" id="device-id-input" placeholder="Ej: DEV-8DJSCVFT (pegar el que envió el usuario)" style="width: 100%; padding: 8px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text); border-radius: 4px; font-family: monospace; font-size: 0.85rem;">
+            <small style="color: var(--muted); font-size: 0.7rem; display: block; margin-top: 4px;">💡 Si lo dejas vacío, la licencia se asignará automáticamente al activar</small>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn btn-generate" onclick="generateLicense()" style="flex: 1;">➕ Generar Licencia</button>
+            <button class="btn btn-action" onclick="loadLicenses()">🔄 Actualizar</button>
+        </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="license-table">
+            <thead>
+                <tr>
+                    <th>Código de Licencia</th>
+                    <th>Dispositivo Asignado</th>
+                    <th>Estado</th>
+                    <th>Fecha Creación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="licenses-tbody">
+                <tr><td colspan="5" class="empty-state">Cargando licencias...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+    <!-- SECCIÓN DE GESTIÓN DE ANUNCIOS -->
+    <div class="admin-header" style="margin-top: 40px; border: 1px solid var(--accent);">
+        <h1>📢 Gestión de Anuncios</h1>
+        <p>Administra los banners que ven los usuarios FREE</p>
+    </div>
+
+    <div style="background: var(--bg-card); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--input-border);">
+        <h3 style="margin-top:0; color:var(--warning);">➕ Agregar Nuevo Anuncio</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+            <input type="text" id="ad-name" placeholder="Nombre (Ej: Lincoln Electric)" style="padding:8px; border-radius:4px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text);">
+            <input type="text" id="ad-link" placeholder="Link (URL)" style="padding:8px; border-radius:4px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text);">
+            <input type="text" id="ad-path" placeholder="Ruta (ads/img/banner.jpg)" style="padding:8px; border-radius:4px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text);">
+            <input type="number" id="ad-weight" placeholder="Peso (1-10)" value="5" min="1" style="padding:8px; border-radius:4px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text);">
+        </div>
+        <button class="btn btn-generate" onclick="addNewAd()" style="width:100%; margin-top:15px;">Guardar Anuncio</button>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="license-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Vista Previa</th>
+                    <th>Link</th>
+                    <th>Peso</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="ads-tbody">
+                <tr><td colspan="6" class="empty-state">Cargando anuncios...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+<script type="module" src="js/firebase-config.js"></script>
+<script type="module" src="js/admin.js"></script>
+
+</body>
+</html>

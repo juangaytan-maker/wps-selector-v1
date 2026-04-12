@@ -1,0 +1,24 @@
+{
+  "settings": {
+    "rotationTime": 6000, 
+    "enabled": true
+  },
+  "ads": [
+    {
+      "id": 1,
+      "image": "ads/img/banner-ejemplo.jpg",
+      "link": "https://wa.me/528141434957?text=Hola,%20vi%20tu%20banner",
+      "alt": "Contacta al experto",
+      "weight": 5,
+      "active": true
+    },
+    {
+      "id": 2,
+      "image": "ads/img/banner-ejemplo.jpg",
+      "link": "https://wa.me/528141434957",
+      "alt": "Oferta Especial",
+      "weight": 2,
+      "active": true
+    }
+  ]
+}

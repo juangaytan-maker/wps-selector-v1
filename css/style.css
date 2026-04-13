@@ -565,3 +565,66 @@ input.static-field {
     z-index: 10;
     pointer-events: none;
 }
+/* =========================================
+   🖨️ MODO DE IMPRESIÓN (PDF)
+   ========================================= */
+
+@media print {
+    /* 1. Ocultar todo lo que no sea el reporte */
+    body * {
+        visibility: hidden;
+    }
+
+    /* 2. Mostrar solo la pantalla de resultados */
+    #result-screen, #result-screen * {
+        visibility: visible;
+    }
+
+    #result-screen {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+        background: white;
+        color: black;
+        /* Forzar una sola página */
+        page-break-after: always;
+        page-break-inside: avoid;
+    }
+
+    /* 3. Ocultar botones dentro del resultado */
+    .btn, .nav-tabs, .offline-badge, .ad-container, header {
+        display: none !important;
+    }
+
+    /* 4. Compactar el diseño para que quepa en A4 */
+    #result-screen {
+        font-size: 0.85rem; /* Reduce un poco el texto */
+        transform: scale(0.9); /* Reduce todo el bloque al 90% */
+        transform-origin: top left;
+    }
+
+    /* 5. Ajustar las cajas de parámetros (Grid más apretado) */
+    .param-grid {
+        grid-template-columns: repeat(4, 1fr) !important; /* 4 columnas en lugar de 2 o 3 */
+        gap: 5px !important;
+        margin-bottom: 5px !important;
+    }
+
+    .param-box {
+        padding: 4px !important;
+        border: 1px solid #ccc !important;
+    }
+
+    .param-label {
+        font-size: 0.7rem !important;
+    }
+    
+    .section-title {
+        font-size: 0.9rem !important;
+        margin: 5px 0 !important;
+        border-bottom: 2px solid #000 !important;
+    }
+}

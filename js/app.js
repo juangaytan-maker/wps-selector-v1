@@ -486,33 +486,14 @@ window.exportarPDF = function() {
     const wpsCode = document.getElementById('res-wps-id').textContent;
     const originalTitle = document.title;
     
-    // Cambiar título para que sea el nombre del PDF
+    // Poner el código WPS como título del archivo PDF
     document.title = wpsCode;
     
-    const content = document.getElementById('result-screen');
-    const printableHeight = 1045; // Altura aprox de A4 en px
-    const currentHeight = content.scrollHeight;
-    
-    // Escalar si es necesario para que quepa en una hoja
-    if (currentHeight > printableHeight) {
-        const scale = printableHeight / currentHeight;
-        content.style.transform = `scale(${scale})`;
-        content.style.transformOrigin = 'top left';
-        content.style.width = `${100 / scale}%`;
-        content.style.marginBottom = `${currentHeight * (1 - scale)}px`;
-    }
-    
-    // Imprimir (guardar como PDF)
+    // Ejecutar impresión (el CSS @media print hará la magia)
     window.print();
     
-    // Restaurar estilos
-    setTimeout(() => {
-        content.style.transform = '';
-        content.style.transformOrigin = '';
-        content.style.width = '';
-        content.style.marginBottom = '';
-        document.title = originalTitle;
-    }, 500);
+    // Restaurar título
+    document.title = originalTitle;
 };
 
 // =========================================

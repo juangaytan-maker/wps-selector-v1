@@ -1,89 +1,203 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <base href="/wps-selector-v1/">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="WPS Selector Pro - Generador de Procedimientos de Soldadura AWS D1.1">
-    <meta name="theme-color" content="#1a1a2e">
-    <title>WPS Selector Pro</title>
-    
-    <link rel="icon" href="icons/favicon.png" type="image/png">
-    <link rel="apple-touch-icon" href="icons/favicon.png">
-    <link rel="manifest" href="manifest.json">
-    
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Selector de Parámetros WPS - Herramienta offline para soldadores y supervisores">
+  <title>Selector WPS Pro</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/images/icons/favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
+  <div class="container">
+    <header>
+      <h1>🔧 Selector WPS Pro</h1>
+      <p>Parámetros de referencia AWS D1.1 / A5.x</p>
+    </header>
 
-<div class="container">
-    <div class="nav-tabs">
-        <button class="nav-tab active" onclick="switchTab('form-screen')">🔧 Selector</button>
-        <button class="nav-tab" onclick="switchTab('activation-screen')">🔑 Activar PRO</button>
+    <!-- Indicador de Pasos -->
+    <div class="nav-steps">
+      <div class="step-indicator active" data-step="1">1. Proceso & Material</div>
+      <div class="step-indicator" data-step="2">2. Junta & Posición</div>
+      <div class="step-indicator" data-step="3">3. Resultados</div>
     </div>
 
-    <div id="form-screen" class="screen active">
-        <div id="ad-container" class="ad-container" style="display: none;"></div>
-        <header>
-            <h1>WPS SELECTOR <span id="header-badge">FREE</span></h1>
-            <h2>Matriz WPS | AWS D1.1</h2>
-        </header>
-
-        <div class="form-group">
-            <label>Proceso de Soldadura</label>
-            <select id="process" onchange="checkProcessPro();">
-                <option value="">-- Seleccionar --</option>
-                <option value="GMAW">GMAW</option>
-                <option value="FCAW">FCAW</option>
-                <option value="SMAW">SMAW</option>
-            </select>
-        </div>
-
-        <button class="btn btn-search" onclick="validarYMostrarAnuncio(mostrarResultados)">🔍 BUSCAR PARÁMETROS</button>
+    <!-- PASO 1 -->
+    <div id="step-1" class="step active">
+      <div class="form-group">
+        <label for="process">Proceso de Soldadura *</label>
+        <select id="process" required>
+          <option value="">-- Seleccionar --</option>
+          <option value="GMAW">GMAW (MIG/MAG)</option>
+          <option value="FCAW">FCAW (Flux-Cored)</option>
+          <option value="SMAW">SMAW (Electrodo Revestido)</option>
+          <option value="GTAW">GTAW (TIG)</option>
+          <option value="SAW">SAW (Arco Sumergido)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="material">Tipo de Acero *</label>
+        <select id="material" required>
+          <option value="">-- Seleccionar --</option>
+          <option value="A36">A36 (Estructural)</option>
+          <option value="A572-50">A572 Gr.50</option>
+          <option value="A514">A514 (Alta Resistencia)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="thickness">Espesor (mm) *</label>        <input type="number" id="thickness" inputmode="decimal" placeholder="Ej: 6.0" min="1" step="0.1" required>
+      </div>
+      <button class="btn btn-primary" id="next-1">Siguiente ▶</button>
     </div>
 
-    <div id="result-screen" class="screen">
-        <header>
-            <h1>RESULTADOS WPS <span id="result-badge"></span></h1>
-            <h2>Parámetros Calculados</h2>
-        </header>
-
-        <div class="warning-box">
-            <div class="warning-icon">⚠️</div>
-            <div class="warning-text">
-                <strong>AVISO TÉCNICO:</strong> Estos parámetros son estimaciones basadas en normas AWS D1.1. Deben ser validados en campo por personal calificado. El uso de estos datos es responsabilidad exclusiva del usuario.
-            </div>
-        </div>
-
-        <div class="result-header">
-            <span class="wps-id" id="res-wps-id">WPS-GEN</span>
-            <span class="badge" id="res-badge">AWS D1.1</span>
-        </div>
-
-        <div class="param-grid config">
-            </div>
-
-        <button class="btn btn-back" onclick="volverFormulario()">🔙 VOLVER</button>
-    </div>
+    <!-- PASO 2 -->
+    <div id="step-2" class="step">
+      <div class="form-group">
+        <label for="joint-type">Tipo de Junta *</label>
+        <select id="joint-type" required>
+          <option value="">-- Seleccionar --</option>
+          <option value="fillet">Filete</option>
+          <option value="groove-bevel">Ranura Bisel (V)</option>
+          <option value="groove-j">Ranura J</option>
+          <option value="groove-u">Ranura U</option>
+          <option value="hybrid">Ranura-Filete</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="weld-size">Tamaño de Soldadura (mm)</label>
+        <input type="number" id="weld-size" inputmode="decimal" placeholder="Ej: 6.0" min="1" step="0.5">
+      </div>
+      <div class="form-group">
+        <label for="joint-length">Longitud de Junta (mm)</label>
+        <input type="number" id="joint-length" inputmode="numeric" placeholder="Ej: 300" min="10" step="10">
+      </div>
+      
+      <div class="form-group">
+  <label for="gas-type">Tipo de Gas</label>
+  <select id="gas-type">
+    <option value="">-- Automático según proceso --</option>
+    <option value="ar-co2-7525">Ar/CO₂ 75%/25% (C25)</option>
+    <option value="ar-co2-8020">Ar/CO₂ 80%/20%</option>
+    <option value="co2">CO₂ 100%</option>
+    <option value="ar">Argón 100%</option>
+    <option value="ar-o2-9802">Ar/O₂ 98%/2%</option>
+  </select>
 </div>
 
-<div id="legalModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content legal-modal-box">
-        <div class="modal-title">Aviso de Responsabilidad</div>
-        <div class="legal-content-scroll">
-            <p><strong>1. Alcance:</strong> Esta aplicación es una herramienta de asistencia técnica. Los cálculos de consumibles y parámetros eléctricos son teóricos.</p>
-            <p><strong>2. Limitación de Daños:</strong> El desarrollador no se hace responsable de fallas mecánicas, accidentes laborales, pérdida de material o integridad estructural resultantes de la aplicación de estos datos.</p>
-            <p><strong>3. Validación:</strong> Todo procedimiento de soldadura (WPS) debe ser respaldado por un Registro de Calificación de Procedimiento (PQR) según la normativa vigente.</p>
-        </div>
-        <button class="btn-cancel" onclick="document.getElementById('legalModal').style.display='none'">He leído y comprendo</button>
-    </div>
+<div class="form-group">
+  <label for="flow-rate">Caudal de Gas (L/min)</label>
+  <input type="number" id="flow-rate" inputmode="decimal" placeholder="Ej: 15" min="5" max="50" step="1">
+  <small style="color: var(--text-muted); font-size: 0.8rem;">
+    💡 Interior: 15-20 L/min | Exterior: 20-30 L/min
+  </small>
 </div>
 
-<footer class="main-footer">
-    <p>WPS Selector Pro v3.1.5 | © 2026</p>
-    <p class="footer-legal-link" onclick="document.getElementById('legalModal').style.display='flex'">Términos y Condiciones</p>
-</footer>
+<div class="form-group">
+  <label for="cylinder-size">Tamaño de Cilindro</label>
+  <select id="cylinder-size">
+    <option value="">-- Sin cilindro --</option>
+    <option value="20">20 L (pequeño)</option>
+    <option value="40">40 L (mediano)</option>
+    <option value="50">50 L (grande)</option>
+    <option value="custom">Personalizado...</option>
+  </select>
+</div>
 
-<script type="module" src="js/app.js"></script>
+<div class="form-group" id="custom-cylinder-group" style="display: none;">
+  <label for="custom-cylinder">Capacidad (L)</label>
+  <input type="number" id="custom-cylinder" inputmode="numeric" placeholder="Ej: 33" min="1" step="1">
+</div>
+
+
+      <div class="form-group">
+        <label for="root-gap">Abertura entre placas (mm)</label>
+   
+        <input type="number" id="root-gap" inputmode="decimal" placeholder="Ej: 2.0" min="0" max="10" step="0.5">
+      </div>
+      <div class="form-group">
+        <label for="position">Posición *</label>
+        <select id="position" required>
+          <option value="">-- Seleccionar --</option>
+          <option value="1F">1F (Plana)</option>
+          <option value="2F">2F (Horizontal)</option>
+          <option value="3F">3F (Vertical)</option>
+          <option value="4F">4F (Sobrecabeza)</option>
+          <option value="1G">1G (Plana Ranura)</option>
+          <option value="2G">2G (Horizontal Ranura)</option>
+          <option value="3G">3G (Vertical Ranura)</option>
+          <option value="4G">4G (Sobrecabeza Ranura)</option>
+        </select>
+      </div>
+
+      <div id="joint-image-container">
+        🖼️ La ilustración aparecerá aquí según la selección
+      </div>
+
+      <div class="btn-row">        <button class="btn btn-secondary" id="back-1">◀ Atrás</button>
+        <button class="btn btn-primary" id="calculate-btn">Calcular WPS ⚙️</button>
+      </div>
+    </div>
+
+    <!-- PASO 3 -->
+    <div id="step-3" class="step">
+      <h2 style="margin: 0 0 0.5rem; font-size: 1.2rem; text-align: center;">
+        ✅ Parámetros Recomendados
+        <span id="validation-badge" class="badge badge-success">AWS: CUMPLE</span>
+      </h2>
+      
+      <div id="results-content" style="display: none;">
+        <div class="results-grid">
+          <div class="result-card"><div class="label">Proceso</div><div class="value" data-res="process">-</div></div>
+          <div class="result-card"><div class="label">Electrodo/Alambre</div><div class="value" data-res="electrode">-</div></div>
+          <div class="result-card"><div class="label">Voltaje</div><div class="value" data-res="voltage">-</div></div>
+          <div class="result-card"><div class="label">Amperaje</div><div class="value" data-res="amperage">-</div></div>
+          <div class="result-card"><div class="label">WFS / Vel. Aliment.</div><div class="value" data-res="wfs">-</div></div>
+          <div class="result-card"><div class="label">Travel Speed</div><div class="value" data-res="travel">-</div></div>
+          <div class="result-card"><div class="label">Heat Input</div><div class="value" data-res="heat-input">-</div></div>
+          <div class="result-card"><div class="label">Pérdidas Est.</div><div class="value" data-res="waste">-</div></div>
+        </div>
+
+        <div class="consumption-box">
+          <strong>📦 Consumo Estimado:</strong> <span id="consumption-text">Pendiente de cálculo...</span>
+        </div>
+       
+<div id="gas-consumption-container"></div>
+
+        <div id="status-msg" class="status-msg"></div>
+
+        <div class="btn-row" style="margin-top: 1rem;">
+          <button class="btn btn-secondary" id="back-2">◀ Modificar</button>
+          <button class="btn btn-success" id="save-btn">💾 Guardar / Exportar</button>
+        </div>
+      </div>
+      
+      <div id="loading-state" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+        ⏳ Cargando base de datos y calculando...
+      </div>
+    </div>
+
+    <footer>
+      <p>Ilustraciones: Wikimedia Commons (CC0) & Open Washington (CC-BY 4.0)<br>
+      Selector WPS Pro v1.0 • Optimizado para taller (offline-ready)</p>
+    </footer>
+  </div>
+
+  <!-- jsPDF para generación de PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Script principal como módulo -->
+  <script type="module" src="js/main.js"></script>
+
+  <!-- Registro del Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('✅ SW registrado:', reg.scope))
+          .catch(err => console.warn('⚠️ SW no registrado:', err));
+      });
+    }
+  </script>
 </body>
 </html>

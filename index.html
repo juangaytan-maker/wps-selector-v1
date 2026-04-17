@@ -15,6 +15,7 @@
     <header>
       <h1>🔧 Selector WPS Pro</h1>
       <p>Parámetros de referencia AWS D1.1 / A5.x</p>
+      <div id="header-badge" class="badge">FREE</div>
     </header>
 
     <!-- Indicador de Pasos -->
@@ -24,11 +25,115 @@
       <div class="step-indicator" data-step="3">3. Resultados</div>
     </div>
 
-    <!-- PASO 1 -->
+    <!-- =========================================
+         🔔 NOTIFICACIONES TOAST (NUEVO)
+         ========================================= -->
+    <div id="toast-container"></div>
+
+    <!-- =========================================
+         📜 MODAL TÉRMINOS Y CONDICIONES (NUEVO)
+         ========================================= -->
+    <div id="terms-modal" class="terms-modal-overlay" style="display: none;">
+      <div class="terms-modal-content">
+        <div class="terms-header">
+          <h2>📜 Términos y Condiciones</h2>
+          <p>Por favor, lee y acepta antes de usar WPS Selector Pro.</p>
+        </div>
+        <div class="terms-body">
+          <p><strong>1. Uso de la Aplicación:</strong> WPS Selector Pro es una herramienta de asistencia para el cálculo de parámetros de soldadura basada en normas AWS D1.1. Los resultados son estimaciones y deben ser validados por un Ingeniero de Soldadura Certificado (CWI) antes de su uso en producción.</p>
+          <p><strong>2. Responsabilidad:</strong> El desarrollador no se hace responsable por fallos estructurales, defectos de soldadura o accidentes derivados del uso de los parámetros generados por esta app. El usuario asume total responsabilidad por la aplicación de los mismos.</p>
+          <p><strong>3. Datos y Privacidad:</strong> Esta aplicación recopila datos anónimos de uso (contadores de cálculos, dispositivos nuevos) con fines estadísticos para mejorar el servicio. No se almacenan datos personales sensibles.</p>
+          <p><strong>4. Licencias:</strong> El uso de funciones "PRO" requiere una licencia válida. Cualquier intento de ingeniería inversa o uso no autorizado de códigos de licencia resultará en el bloqueo del acceso.</p>
+        </div>
+        <div class="terms-footer">
+          <label class="terms-checkbox">
+            <input type="checkbox" id="terms-checkbox">            <span>He leído y acepto los Términos y Condiciones</span>
+          </label>
+          <button id="accept-terms-btn" disabled>Aceptar y Continuar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================
+         📢 INTERSTICIAL DE ANUNCIOS (NUEVO)
+         ========================================= -->
+    <div id="pre-result-ad-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9998;justify-content:center;align-items:center;flex-direction:column;">
+      <div style="text-align:center;max-width:600px;padding:20px;">
+        <img id="interstitial-ad-img" src="" alt="Anuncio" style="width:100%;max-width:400px;border-radius:12px;margin-bottom:20px;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+        <div id="interstitial-timer" style="color:#fff;font-size:1.1rem;margin-bottom:16px;">⏱️ Preparando...</div>
+        <button id="interstitial-btn" style="background:linear-gradient(135deg,#e94560,#0f3460);color:#fff;border:none;padding:14px 32px;border-radius:8px;font-size:1rem;font-weight:bold;cursor:pointer;transition:all 0.3s;">
+          ⏳ Espere...
+        </button>
+      </div>
+    </div>
+
+    <!-- =========================================
+         📢 ANUNCIOS POST-CÁLCULO (NUEVO)
+         ========================================= -->
+    <div id="post-calc-ad-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;justify-content:center;align-items:center;flex-direction:column;">
+      <div style="text-align:center;max-width:600px;padding:20px;">
+        <h3 style="color:#ffd700;margin-bottom:20px;font-size:1.2rem;">📢 Patrocinador</h3>
+        <img id="post-calc-ad-img" src="" alt="Anuncio" style="width:100%;max-width:500px;height:auto;border-radius:12px;margin-bottom:20px;box-shadow:0 8px 32px rgba(0,0,0,0.5);cursor:pointer;">
+        <div id="post-calc-ad-timer" style="color:#fff;font-size:1.1rem;margin-bottom:20px;">⏱️ Preparando...</div>
+        <button id="post-calc-ad-btn" style="background:linear-gradient(135deg,#00d9ff,#0077ff);color:#fff;border:none;padding:14px 32px;border-radius:8px;font-size:1rem;font-weight:bold;cursor:pointer;transition:all 0.3s;">
+          ⏳ Espere...
+        </button>
+        <p style="color:#888;font-size:0.85rem;margin-top:15px;">🔒 Contenido gratuito patrocinado</p>
+      </div>
+    </div>
+
+    <!-- =========================================
+         💳 MODAL DE PAGO PAYPAL (NUEVO - OPCIONAL)
+         ========================================= -->
+    <div id="payment-modal" class="payment-modal-overlay" style="display: none;">
+      <div class="payment-modal-content">
+        <div class="payment-header">
+          <h2>🔑 Activar WPS PRO</h2>
+          <p>Obtén acceso completo por solo <strong>$9.99 USD/año</strong></p>
+        </div>
+        <div class="payment-benefits">
+          <h3>✨ Beneficios de WPS PRO:</h3>
+          <ul>
+            <li>✅ Acceso a TODOS los procesos de soldadura</li>
+            <li>✅ Sin anuncios intersticiales</li>
+            <li>✅ Cálculos ilimitados</li>            <li>✅ Exportación PDF sin límites</li>
+            <li>✅ Soporte prioritario</li>
+          </ul>
+        </div>
+        <div class="paypal-container">
+          <!-- Aquí iría el botón de PayPal cuando lo configures -->
+          <button class="paypal-button" onclick="showSimulatePayment()">
+            💳 Simular Pago (Modo Prueba)
+          </button>
+        </div>
+        <div class="payment-footer">
+          <p>🔒 Pago seguro procesado por PayPal</p>
+          <button onclick="closePaymentModal()" class="btn-close">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================
+         🔐 MODAL PRO / ACTIVACIÓN (EXISTENTE)
+         ========================================= -->
+    <div id="proModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3>⚠️ Función PRO</h3>
+        <p id="modalText">Esta opción requiere <span class="modal-highlight">WPS PRO</span></p>
+        <div class="modal-actions">
+          <button class="btn btn-primary" onclick="goToActivation()">Activar PRO</button>
+          <button class="btn btn-secondary" onclick="closeProModal()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================
+         📋 PASO 1: PROCESO & MATERIAL (CORREGIDO)
+         ========================================= -->
     <div id="step-1" class="step active">
-      <div class="form-group">
+      <div class="form-group" id="group-process">
         <label for="process">Proceso de Soldadura *</label>
-        <select id="process" required>
+        <select id="process" required onchange="checkProcessPro()">
           <option value="">-- Seleccionar --</option>
           <option value="GMAW">GMAW (MIG/MAG)</option>
           <option value="FCAW">FCAW (Flux-Cored)</option>
@@ -37,93 +142,109 @@
           <option value="SAW">SAW (Arco Sumergido)</option>
         </select>
       </div>
-      <div class="form-group">
+
+      <!-- NUEVO: Select de Electrodo (se llena dinámicamente) -->
+      <div class="form-group" id="group-electrode">
+        <label for="electrode">Electrodo / Alambre *</label>        <select id="electrode" required disabled>
+          <option value="">-- Selecciona un proceso primero --</option>
+        </select>
+        <small style="color:var(--text-muted);">🔒 Opciones con candado requieren WPS PRO</small>
+      </div>
+
+      <!-- NUEVO: Select de Diámetro (se llena dinámicamente) -->
+      <div class="form-group" id="group-diameter">
+        <label for="diameter">Diámetro *</label>
+        <select id="diameter" required disabled>
+          <option value="">-- Selecciona un electrodo primero --</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="group-material">
         <label for="material">Tipo de Acero *</label>
-        <select id="material" required>
+        <select id="material" required onchange="checkMaterialPro()">
           <option value="">-- Seleccionar --</option>
           <option value="A36">A36 (Estructural)</option>
           <option value="A572-50">A572 Gr.50</option>
           <option value="A514">A514 (Alta Resistencia)</option>
         </select>
       </div>
-      <div class="form-group">
-        <label for="thickness">Espesor (mm) *</label>        <input type="number" id="thickness" inputmode="decimal" placeholder="Ej: 6.0" min="1" step="0.1" required>
+
+      <!-- CORREGIDO: ID thickness → baseThickness -->
+      <div class="form-group" id="group-thickness">
+        <label for="baseThickness">Espesor Base (mm) *</label>
+        <input type="number" id="baseThickness" inputmode="decimal" placeholder="Ej: 6.0" min="1" step="0.1" required>
       </div>
-      <button class="btn btn-primary" id="next-1">Siguiente ▶</button>
+
+      <button class="btn btn-primary" id="next-1" onclick="switchToStep(2)">Siguiente ▶</button>
     </div>
 
-    <!-- PASO 2 -->
+    <!-- =========================================
+         📋 PASO 2: JUNTA & POSICIÓN (CORREGIDO)
+         ========================================= -->
     <div id="step-2" class="step">
+      <!-- CORREGIDO: ID joint-type → weldingType -->
       <div class="form-group">
-        <label for="joint-type">Tipo de Junta *</label>
-        <select id="joint-type" required>
+        <label for="weldingType">Tipo de Junta *</label>
+        <select id="weldingType" required onchange="updateConditionalFields()">
           <option value="">-- Seleccionar --</option>
-          <option value="fillet">Filete</option>
-          <option value="groove-bevel">Ranura Bisel (V)</option>
-          <option value="groove-j">Ranura J</option>
-          <option value="groove-u">Ranura U</option>
-          <option value="hybrid">Ranura-Filete</option>
+          <option value="Filete">Filete</option>
+          <option value="Ranura Bisel">Ranura Bisel (V)</option>
+          <option value="Tope">Tope (Square)</option>
         </select>
       </div>
-      <div class="form-group">
-        <label for="weld-size">Tamaño de Soldadura (mm)</label>
-        <input type="number" id="weld-size" inputmode="decimal" placeholder="Ej: 6.0" min="1" step="0.5">
+
+      <!-- CORREGIDO: ID weld-size → weldSize -->
+      <div class="form-group" id="group-weldsize">        <label for="weldSize">Tamaño de Soldadura (mm)</label>
+        <input type="number" id="weldSize" inputmode="decimal" placeholder="Ej: 6.0" min="1" step="0.5" onchange="checkWeldSizePro()">
       </div>
+
       <div class="form-group">
-        <label for="joint-length">Longitud de Junta (mm)</label>
-        <input type="number" id="joint-length" inputmode="numeric" placeholder="Ej: 300" min="10" step="10">
+        <label for="weldLength">Longitud de Junta (mm)</label>
+        <input type="number" id="weldLength" inputmode="numeric" placeholder="Ej: 300" min="10" step="10">
       </div>
       
       <div class="form-group">
-  <label for="gas-type">Tipo de Gas</label>
-  <select id="gas-type">
-    <option value="">-- Automático según proceso --</option>
-    <option value="ar-co2-7525">Ar/CO₂ 75%/25% (C25)</option>
-    <option value="ar-co2-8020">Ar/CO₂ 80%/20%</option>
-    <option value="co2">CO₂ 100%</option>
-    <option value="ar">Argón 100%</option>
-    <option value="ar-o2-9802">Ar/O₂ 98%/2%</option>
-  </select>
-</div>
-
-<div class="form-group">
-  <label for="flow-rate">Caudal de Gas (L/min)</label>
-  <input type="number" id="flow-rate" inputmode="decimal" placeholder="Ej: 15" min="5" max="50" step="1">
-  <small style="color: var(--text-muted); font-size: 0.8rem;">
-    💡 Interior: 15-20 L/min | Exterior: 20-30 L/min
-  </small>
-</div>
-
-<div class="form-group">
-  <label for="cylinder-size">Tamaño de Cilindro</label>
-  <select id="cylinder-size">
-    <option value="">-- Sin cilindro --</option>
-    <option value="20">20 L (pequeño)</option>
-    <option value="40">40 L (mediano)</option>
-    <option value="50">50 L (grande)</option>
-    <option value="custom">Personalizado...</option>
-  </select>
-</div>
-
-<div class="form-group" id="custom-cylinder-group" style="display: none;">
-  <label for="custom-cylinder">Capacidad (L)</label>
-  <input type="number" id="custom-cylinder" inputmode="numeric" placeholder="Ej: 33" min="1" step="1">
-</div>
-
+        <label for="gasType">Tipo de Gas</label>
+        <select id="gasType">
+          <option value="">-- Automático según proceso --</option>
+          <option value="ar-co2-7525">Ar/CO₂ 75%/25% (C25)</option>
+          <option value="ar-co2-8020">Ar/CO₂ 80%/20%</option>
+          <option value="co2">CO₂ 100%</option>
+          <option value="ar">Argón 100%</option>
+          <option value="ar-o2-9802">Ar/O₂ 98%/2%</option>
+        </select>
+      </div>
 
       <div class="form-group">
-        <label for="root-gap">Abertura entre placas (mm)</label>
-   
-        <input type="number" id="root-gap" inputmode="decimal" placeholder="Ej: 2.0" min="0" max="10" step="0.5">
+        <label for="flowRate">Caudal de Gas (L/min)</label>
+        <input type="number" id="flowRate" inputmode="decimal" placeholder="Ej: 15" min="5" max="50" step="1">
+        <small style="color: var(--text-muted); font-size: 0.8rem;">
+          💡 Interior: 15-20 L/min | Exterior: 20-30 L/min
+        </small>
       </div>
+
+      <!-- CORREGIDO: ID root-gap → gap (para ranura) y fileteGap (para filete) -->
+      <div class="form-group" id="condition-filete" style="display:none;">
+        <label for="fileteGap">Abertura Filete (mm)</label>
+        <input type="number" id="fileteGap" inputmode="decimal" placeholder="Ej: 2.0" min="0" max="10" step="0.5" onchange="validateFileteGap()">
+        <div id="gapWarning" style="display:none;color:#fca311;font-size:0.85rem;margin-top:4px;">⚠️ Gap >5mm requiere WPS especial</div>
+      </div>
+      <div class="form-group" id="condition-bevel" style="display:none;">
+        <label for="gap">Abertura de Raíz (mm)</label>
+        <input type="number" id="gap" inputmode="decimal" placeholder="Ej: 2.0" min="0" max="10" step="0.5">
+      </div>
+      <div class="form-group" id="condition-square" style="display:none;">
+        <label for="squareGap">Abertura Tope (mm)</label>
+        <input type="number" id="squareGap" inputmode="decimal" placeholder="Ej: 0.0" min="0" max="5" step="0.5">
+      </div>
+
       <div class="form-group">
         <label for="position">Posición *</label>
-        <select id="position" required>
+        <select id="position" required onchange="updateFormLogic()">
           <option value="">-- Seleccionar --</option>
-          <option value="1F">1F (Plana)</option>
-          <option value="2F">2F (Horizontal)</option>
-          <option value="3F">3F (Vertical)</option>
-          <option value="4F">4F (Sobrecabeza)</option>
+          <option value="1F">1F (Plana Filete)</option>
+          <option value="2F">2F (Horizontal Filete)</option>          <option value="3F">3F (Vertical Filete)</option>
+          <option value="4F">4F (Sobrecabeza Filete)</option>
           <option value="1G">1G (Plana Ranura)</option>
           <option value="2G">2G (Horizontal Ranura)</option>
           <option value="3G">3G (Vertical Ranura)</option>
@@ -131,46 +252,47 @@
         </select>
       </div>
 
-      <div id="joint-image-container">
-        🖼️ La ilustración aparecerá aquí según la selección
+      <div id="joint-image-container" style="text-align:center;padding:1rem;background:rgba(255,255,255,0.05);border-radius:8px;margin:1rem 0;">
+        🖼️ Ilustración de junta aparecerá aquí
       </div>
 
-      <div class="btn-row">        <button class="btn btn-secondary" id="back-1">◀ Atrás</button>
-        <button class="btn btn-primary" id="calculate-btn">Calcular WPS ⚙️</button>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="switchToStep(1)">◀ Atrás</button>
+        <button class="btn btn-primary" id="calculate-btn" onclick="validarYMostrarAnuncio(mostrarResultados)">Calcular WPS ⚙️</button>
       </div>
     </div>
 
-    <!-- PASO 3 -->
+    <!-- =========================================
+         📋 PASO 3: RESULTADOS (CORREGIDO IDs)
+         ========================================= -->
     <div id="step-3" class="step">
       <h2 style="margin: 0 0 0.5rem; font-size: 1.2rem; text-align: center;">
         ✅ Parámetros Recomendados
-        <span id="validation-badge" class="badge badge-success">AWS: CUMPLE</span>
+        <span id="res-badge" class="badge badge-success">AWS: CUMPLE</span>
       </h2>
       
       <div id="results-content" style="display: none;">
         <div class="results-grid">
-          <div class="result-card"><div class="label">Proceso</div><div class="value" data-res="process">-</div></div>
-          <div class="result-card"><div class="label">Electrodo/Alambre</div><div class="value" data-res="electrode">-</div></div>
-          <div class="result-card"><div class="label">Voltaje</div><div class="value" data-res="voltage">-</div></div>
-          <div class="result-card"><div class="label">Amperaje</div><div class="value" data-res="amperage">-</div></div>
-          <div class="result-card"><div class="label">WFS / Vel. Aliment.</div><div class="value" data-res="wfs">-</div></div>
-          <div class="result-card"><div class="label">Travel Speed</div><div class="value" data-res="travel">-</div></div>
-          <div class="result-card"><div class="label">Heat Input</div><div class="value" data-res="heat-input">-</div></div>
-          <div class="result-card"><div class="label">Pérdidas Est.</div><div class="value" data-res="waste">-</div></div>
+          <div class="result-card"><div class="label">Código WPS</div><div class="value" id="res-wps-id">-</div></div>
+          <div class="result-card"><div class="label">Proceso</div><div class="value" id="res-process">-</div></div>
+          <div class="result-card"><div class="label">Electrodo</div><div class="value" id="res-electrode">-</div></div>
+          <div class="result-card"><div class="label">Voltaje</div><div class="value" id="res-voltage">-</div></div>
+          <div class="result-card" id="res-amperage-row"><div class="label">Amperaje</div><div class="value" id="res-amperage">-</div></div>
+          <div class="result-card" id="res-wfs-row"><div class="label">WFS</div><div class="value" id="res-wfs">-</div></div>
+          <div class="result-card"><div class="label">Travel Speed</div><div class="value" id="res-travel">-</div></div>
+          <div class="result-card"><div class="label">Heat Input</div><div class="value" id="res-heat-input">-</div></div>
         </div>
 
         <div class="consumption-box">
           <strong>📦 Consumo Estimado:</strong> <span id="consumption-text">Pendiente de cálculo...</span>
         </div>
        
-<div id="gas-consumption-container"></div>
-
+        <div id="gas-consumption-container"></div>
         <div id="status-msg" class="status-msg"></div>
 
         <div class="btn-row" style="margin-top: 1rem;">
-          <button class="btn btn-secondary" id="back-2">◀ Modificar</button>
-          <button class="btn btn-success" id="save-btn">💾 Guardar / Exportar</button>
-        </div>
+          <button class="btn btn-secondary" onclick="volverFormulario()">◀ Modificar</button>
+          <button class="btn btn-success" onclick="exportarPDF()">💾 Exportar PDF</button>        </div>
       </div>
       
       <div id="loading-state" style="text-align: center; padding: 2rem; color: var(--text-muted);">
@@ -178,16 +300,23 @@
       </div>
     </div>
 
-    <footer>
+    <!-- =========================================
+         📢 BANNER DE ANUNCIOS (FOOTER)
+         ========================================= -->
+    <footer id="app-footer">
+      <div id="ad-container" style="display:none;max-width:900px;margin:0 auto;padding:10px;">
+        <!-- Los anuncios se inyectan aquí vía ads-manager.js -->
+      </div>
       <p>Ilustraciones: Wikimedia Commons (CC0) & Open Washington (CC-BY 4.0)<br>
-      Selector WPS Pro v1.0 • Optimizado para taller (offline-ready)</p>
+      Selector WPS Pro v4.2 • Optimizado para taller (offline-ready)</p>
     </footer>
   </div>
 
   <!-- jsPDF para generación de PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
   <!-- Script principal como módulo -->
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/app.js"></script>
 
   <!-- Registro del Service Worker -->
   <script>
@@ -198,6 +327,32 @@
           .catch(err => console.warn('⚠️ SW no registrado:', err));
       });
     }
+  </script>
+
+  <!-- =========================================
+       🔄 SCRIPTS DE NAVEGACIÓN (INLINE)
+       ========================================= -->
+  <script>
+    // Función simple para cambiar entre pasos del wizard
+    window.switchToStep = function(stepNum) {
+      // Ocultar todos los pasos
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.step-indicator').forEach(i => i.classList.remove('active'));
+      
+      // Mostrar paso seleccionado
+      document.getElementById(`step-${stepNum}`).classList.add('active');
+      document.querySelector(`.step-indicator[data-step="${stepNum}"]`).classList.add('active');      
+      // Scroll al top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Toggle para cilindro personalizado
+    document.getElementById('cylinder-size')?.addEventListener('change', function() {
+      const customGroup = document.getElementById('custom-cylinder-group');
+      if (customGroup) {
+        customGroup.style.display = this.value === 'custom' ? 'block' : 'none';
+      }
+    });
   </script>
 </body>
 </html>

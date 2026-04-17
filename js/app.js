@@ -1,14 +1,18 @@
 /**
- * 🎯 MAIN APPLICATION CONTROLLER
+ * 🎯 MAIN APPLICATION CONTROLLER - v4.2 (DATA DRIVEN EDITION)
  * 
  * Este archivo coordina:
  * - Navegación entre pantallas
  * - Validación de formularios
- * - Mostrar/ocultar secciones condicionales
- * - Llamadas a calculadora y sistema PRO
+ * - Selects dinámicos en cascada (Proceso → Electrodo → Diámetro)
+ * - Llamadas a calculadora basada en JSON
+ * - Sistema PRO y anuncios
  * - Exportación a PDF
  */
 
+// ============================================================================
+// 01. 📦 IMPORTS & DEPENDENCIAS
+// ============================================================================
 import { 
     calcularWPSCompleto, 
     getElectricalParams,
@@ -23,102 +27,157 @@ import {
     initProSystem 
 } from './pro-system.js';
 
+import { initAds, getRandomAd } from './ads-manager.js';
+import { DataManager } from './data-manager.js'; // ← CORREGIDO: DataManager (no WPSData)
 
-// Importar el manager de anuncios
-import { initAds } from './ads-manager.js';
-
-import { WPSData } from './data-manager.js';
-
-// ... dentro de tu document.addEventListener('DOMContentLoaded', () => {
-    initProSystem();
-    initAds(); // <--- AGREGA ESTA LÍNEA AQUÍ
-    setupEventListeners();
-// ...
-// =========================================
-// 📚 CONSTANTES Y CONFIGURACIÓN
-// =========================================
-
+// ============================================================================
+// 02. 📚 CONSTANTES & CONFIGURACIÓN
+// ============================================================================
 const FREE_MATERIALS = ['A36', 'A500', 'A516-70', 'A53'];
 const FREE_SIZES = ['6', '8', '10', '12'];
 const FREE_PROCESSES = ['GMAW'];
 
-// =========================================
-// 🎬 INICIALIZACIÓN
-// =========================================
+// Estado global
+window.hasCalculated = false;
 
-document.addEventListener('DOMContentLoaded', () => {
-    await WPSData.load();
-    initProSystem();
-    initAds();
-    setupEventListeners();
-    console.log('✅ WPS Selector Pro cargado correctamente');
+// ============================================================================
+// 03. 🎬 INICIALIZACIÓN (CORREGIDO: async)
+// ============================================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // 1. Cargar datos JSON primero
+        await DataManager.init();
+                // 2. Inicializar sistemas
+        initProSystem();
+        initAds();
+        initDynamicSelects(); // ← NUEVO: Activar selects en cascada
+        
+        console.log('✅ WPS Selector Pro cargado correctamente');
+    } catch (error) {
+        console.error('❌ Error crítico al iniciar:', error);
+        alert('Error al cargar datos de ingeniería. Recarga la página.');
+    }
 });
 
-function setupEventListeners() {
-    // Los event listeners inline en HTML ya están configurados
-    // Aquí podríamos agregar más si es necesario
+// ============================================================================
+// 04. 🔄 SELECTS DINÁMICOS EN CASCADA (NUEVO)
+// ============================================================================
+function initDynamicSelects() {
+    const processSelect = document.getElementById('process');
+    const electrodeSelect = document.getElementById('electrode');
+    const diameterSelect = document.getElementById('diameter');
+
+    if (!processSelect || !electrodeSelect || !diameterSelect) return;
+
+    // Cuando cambia el PROCESO → cargar ELECTRODOS
+    processSelect.addEventListener('change', async function() {
+        const processCode = this.value;
+        
+        // Limpiar selects dependientes
+        electrodeSelect.innerHTML = '<option value="">-- Seleccionar Electrodo --</option>';
+        diameterSelect.innerHTML = '<option value="">-- Seleccionar Diámetro --</option>';
+        diameterSelect.disabled = true;
+        
+        if (!processCode) {
+            electrodeSelect.disabled = true;
+            return;
+        }
+
+        try {
+            const processData = DataManager.getProcess(processCode);
+            if (processData && processData.electrodes) {
+                electrodeSelect.disabled = false;
+                processData.electrodes.forEach(electrode => {
+                    const option = document.createElement('option');
+                    option.value = electrode.classification.trim();
+                    option.textContent = `${electrode.classification.trim()} (${electrode.shielding})`;
+                    electrodeSelect.appendChild(option);
+                });
+            }
+        } catch (e) {
+            console.error("Error cargando electrodos:", e);
+        }    });
+
+    // Cuando cambia el ELECTRODO → cargar DIÁMETROS
+    electrodeSelect.addEventListener('change', function() {
+        const processCode = processSelect.value;
+        const electrodeClass = this.value;
+        
+        diameterSelect.innerHTML = '<option value="">-- Seleccionar Diámetro --</option>';
+        
+        if (!electrodeClass) {
+            diameterSelect.disabled = true;
+            return;
+        }
+
+        try {
+            const processData = DataManager.getProcess(processCode);
+            const electrode = processData.electrodes.find(e => e.classification.trim() === electrodeClass);
+            
+            if (electrode && electrode.diameters_mm) {
+                diameterSelect.disabled = false;
+                // Las llaves del objeto son los diámetros: "1.2", "3/32", etc.
+                const diameters = Object.keys(electrode.diameters_mm);
+                diameters.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d;
+                    option.textContent = `Ø ${d} mm`;
+                    diameterSelect.appendChild(option);
+                });
+            }
+        } catch (e) {
+            console.error("Error cargando diámetros:", e);
+        }
+    });
 }
 
-// =========================================
-// 🔄 NAVEGACIÓN ENTRE PESTAÑAS
-// =========================================
-
-window.switchTab = function(screenId) {
-    // Ocultar todas las pantallas
-    document.querySelectorAll('.screen').forEach(screen => {
-        screen.classList.remove('active');
-    });
+// ============================================================================
+// 05. 🔄 NAVEGACIÓN ENTRE PESTAÑAS (CORREGIDO)
+// ============================================================================
+window.switchTab = function(screenId, btnElement) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     
-    // Desactivar todos los tabs
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    // Mostrar pantalla seleccionada
-    document.getElementById(screenId).classList.add('active');
-    
-    // Activar tab correspondiente
-    event.target.classList.add('active');
+    const target = document.getElementById(screenId);
+    if (target) target.classList.add('active');
+    if (btnElement) btnElement.classList.add('active');
 };
 
-// =========================================
-// 📋 LÓGICA DEL FORMULARIO
-// =========================================
-
-window.updateFormLogic = function() {
+// ============================================================================
+// 06. 📋 LÓGICA DEL FORMULARIO
+// ============================================================================window.updateFormLogic = function() {
     clearAllErrors();
-    
     const position = document.getElementById('position').value;
     const weldSelect = document.getElementById('weldingType');
     const weldStatic = document.getElementById('weldingTypeStatic');
     
-    // Ocultar todas las secciones condicionales
     hideAllConditionalSections();
-    weldSelect.value = "";
+    if (weldSelect) weldSelect.value = "";
     
     if (!position) return;
     
     if (position.endsWith('F')) {
-        // FILETE
-        weldSelect.style.display = 'none';
-        weldStatic.style.display = 'block';
-        weldStatic.value = "FILETE";
+        if (weldSelect) weldSelect.style.display = 'none';
+        if (weldStatic) {
+            weldStatic.style.display = 'block';
+            weldStatic.value = "FILETE";
+        }
         document.getElementById('condition-filete').style.display = 'block';
     } else if (position.endsWith('G')) {
-        // RANURA / TOPE
-        weldSelect.style.display = 'block';
-        weldStatic.style.display = 'none';
-        weldSelect.innerHTML = `
-            <option value="">-- Seleccionar --</option>
-            <option value="Ranura Bisel">Ranura Bisel</option>
-            <option value="Tope">Tope (Square)</option>
-        `;
+        if (weldSelect) weldSelect.style.display = 'block';
+        if (weldStatic) weldStatic.style.display = 'none';
+        if (weldSelect) {
+            weldSelect.innerHTML = `
+                <option value="">-- Seleccionar --</option>
+                <option value="Ranura Bisel">Ranura Bisel</option>
+                <option value="Tope">Tope (Square)</option>
+            `;
+        }
     }
 };
 
 window.updateConditionalFields = function() {
-    const type = document.getElementById('weldingType').value;
-    
+    const type = document.getElementById('weldingType')?.value;
     hideAllConditionalSections();
     
     if (type === 'Ranura Bisel') {
@@ -129,32 +188,28 @@ window.updateConditionalFields = function() {
 };
 
 function hideAllConditionalSections() {
-    document.getElementById('condition-filete').style.display = 'none';
-    document.getElementById('condition-bevel').style.display = 'none';
-    document.getElementById('condition-square').style.display = 'none';
+    ['condition-filete', 'condition-bevel', 'condition-square'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
 }
 
-// =========================================
-// ✅ VALIDACIÓN DE CAMPOS
-// =========================================
-
+// ============================================================================// 07. ✅ VALIDACIÓN DE CAMPOS (ACTUALIZADO)
+// ============================================================================
 window.validarYMostrarAnuncio = function(accionReal) {
     const hasError = validateRequiredFields();
-    
     if (hasError) {
         scrollToFirstError();
         return;
     }
     
-    // Si es PRO, ejecutar directo sin anuncios
     const isPro = localStorage.getItem('wps_pro_active') === 'true';
     if (isPro) {
         accionReal();
         return;
     }
     
-    // Para FREE: aquí iría el anuncio
-    // Por ahora ejecutamos directo
+    // Aquí iría el intersticial de anuncios si lo activas
     accionReal();
 };
 
@@ -162,43 +217,45 @@ function validateRequiredFields() {
     let hasError = false;
     clearAllErrors();
     
-    const fields = [
+    const requiredFields = [
         { id: 'process', group: 'group-process' },
         { id: 'baseThickness', group: 'group-thickness' },
         { id: 'position', group: 'group-position' },
-        { id: 'material', group: 'group-material' }
+        { id: 'material', group: 'group-material' },
+        { id: 'electrode', group: 'group-electrode' }, // ← NUEVO
+        { id: 'diameter', group: 'group-diameter' }     // ← NUEVO
     ];
     
-    fields.forEach(field => {
-        const value = document.getElementById(field.id).value;
-        if (!value) {
+    requiredFields.forEach(field => {
+        const el = document.getElementById(field.id);
+        if (el && !el.value) {
             showError(field.group);
             hasError = true;
         }
     });
     
     // Validar tamaño si es filete
-    const position = document.getElementById('position').value;
-    if (position && position.endsWith('F')) {
-        const weldSize = document.getElementById('weldSize').value;
+    const position = document.getElementById('position')?.value;
+    if (position?.endsWith('F')) {
+        const weldSize = document.getElementById('weldSize')?.value;
         if (!weldSize) {
             showError('group-weldsize');
             hasError = true;
         }
     }
-    
-    return hasError;
+        return hasError;
 }
 
 function showError(groupId) {
     const group = document.getElementById(groupId);
     if (group && !group.classList.contains('error')) {
         group.classList.add('error');
-        
-        const errorMsg = document.createElement('div');
-        errorMsg.className = 'error-message';
-        errorMsg.textContent = 'Campo obligatorio';
-        group.appendChild(errorMsg);
+        if (!group.querySelector('.error-message')) {
+            const msg = document.createElement('div');
+            msg.className = 'error-message';
+            msg.textContent = 'Campo obligatorio';
+            group.appendChild(msg);
+        }
     }
 }
 
@@ -206,32 +263,28 @@ window.clearError = function(groupId) {
     const group = document.getElementById(groupId);
     if (group) {
         group.classList.remove('error');
-        const errorMsg = group.querySelector('.error-message');
-        if (errorMsg) errorMsg.remove();
+        group.querySelector('.error-message')?.remove();
     }
 };
 
 function clearAllErrors() {
     document.querySelectorAll('.form-group.error').forEach(el => {
         el.classList.remove('error');
-        const errorMsg = el.querySelector('.error-message');
-        if (errorMsg) errorMsg.remove();
+        el.querySelector('.error-message')?.remove();
     });
 }
 
 function scrollToFirstError() {
-    const firstError = document.querySelector('.form-group.error');
-    if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    document.querySelector('.form-group.error')?.scrollIntoView({ 
+        behavior: 'smooth', block: 'center' 
+    });
 }
 
-// =========================================
-// 🔒 VALIDACIONES PRO
-// =========================================
-
+// ============================================================================
+// 08. 🔒 VALIDACIONES PRO (ACTUALIZADAS)
+// ============================================================================
 window.checkProcessPro = function() {
-    const process = document.getElementById('process').value;
+    const process = document.getElementById('process')?.value;
     const isPro = localStorage.getItem('wps_pro_active') === 'true';
     
     if (process && !FREE_PROCESSES.includes(process) && !isPro) {
@@ -239,9 +292,8 @@ window.checkProcessPro = function() {
         document.getElementById('process').value = '';
     }
 };
-
 window.checkMaterialPro = function() {
-    const material = document.getElementById('material').value;
+    const material = document.getElementById('material')?.value;
     const isPro = localStorage.getItem('wps_pro_active') === 'true';
     
     if (material && !FREE_MATERIALS.includes(material) && !isPro) {
@@ -250,29 +302,28 @@ window.checkMaterialPro = function() {
     }
 };
 
-window.checkWeldSizePro = function() {
-    const size = document.getElementById('weldSize').value;
-    const isPro = localStorage.getItem('wps_pro_active') === 'true';
-    
-    if (size && !FREE_SIZES.includes(size) && !isPro) {
-        checkProAccess('size');
-        document.getElementById('weldSize').value = '';
-    }
+// ← NUEVO: Validar electrodo PRO
+window.checkElectrodePro = function() {
+    // Por ahora todos los electrodos son FREE, pero aquí puedes agregar lógica futura
+    // Ej: si solo E71T-1M es FREE y E71T-11 es PRO
+};
+
+// ← NUEVO: Validar diámetro PRO
+window.checkDiameterPro = function() {
+    // Similar: puedes definir qué diámetros son FREE vs PRO
 };
 
 function checkProAccess(type) {
     const isPro = localStorage.getItem('wps_pro_active') === 'true';
-    
     if (!isPro) {
         const modal = document.getElementById('proModal');
         const text = document.getElementById('modalText');
-        
         const messages = {
-            'process': 'El proceso seleccionado requiere <span class="modal-highlight">WPS PRO</span>',
+            'process': 'Este proceso requiere <span class="modal-highlight">WPS PRO</span>',
             'material': 'Este material requiere <span class="modal-highlight">WPS PRO</span>',
-            'size': 'Tamaños >12mm requieren <span class="modal-highlight">WPS PRO</span>'
+            'electrode': 'Este electrodo requiere <span class="modal-highlight">WPS PRO</span>',
+            'diameter': 'Este diámetro requiere <span class="modal-highlight">WPS PRO</span>'
         };
-        
         text.innerHTML = messages[type] || messages['process'];
         modal.style.display = 'flex';
     }
@@ -280,19 +331,17 @@ function checkProAccess(type) {
 
 window.goToActivation = function() {
     closeProModal();
-    document.querySelector('.nav-tab:nth-child(2)').click();
+    document.querySelector('.nav-tab:nth-child(2)')?.click();
 };
 
 window.closeProModal = function() {
     document.getElementById('proModal').style.display = 'none';
 };
 
-// =========================================
-// 💳 SIMULACIÓN DE PAGO
-// =========================================
-
-window.showSimulatePayment = function() {
-    const code = generateTestLicenseCode();
+// ============================================================================
+// 09. 💳 SIMULACIÓN DE PAGO (Sin cambios)
+// ============================================================================
+window.showSimulatePayment = function() {    const code = generateTestLicenseCode();
     document.getElementById('generated-code').textContent = code;
     document.getElementById('paymentModal').style.display = 'flex';
 };
@@ -300,16 +349,10 @@ window.showSimulatePayment = function() {
 function generateTestLicenseCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let payload = '';
-    for (let i = 0; i < 6; i++) {
-        payload += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    
+    for (let i = 0; i < 6; i++) payload += chars.charAt(Math.floor(Math.random() * chars.length));
     let checksum = 0;
-    for (let i = 0; i < payload.length; i++) {
-        checksum += payload.charCodeAt(i);
-    }
+    for (let i = 0; i < payload.length; i++) checksum += payload.charCodeAt(i);
     checksum = checksum % 10;
-    
     return `WPS-PRO-${payload}-${checksum}`;
 }
 
@@ -317,11 +360,9 @@ window.copyCode = function() {
     const code = document.getElementById('generated-code').textContent;
     navigator.clipboard.writeText(code).then(() => {
         const btn = document.querySelector('.copy-btn');
-        const originalText = btn.textContent;
+        const original = btn.textContent;
         btn.textContent = '✅ ¡Copiado!';
-        setTimeout(() => {
-            btn.textContent = originalText;
-        }, 2000);
+        setTimeout(() => btn.textContent = original, 2000);
     });
 };
 
@@ -329,150 +370,174 @@ window.closePaymentModal = function() {
     document.getElementById('paymentModal').style.display = 'none';
 };
 
-// =========================================
-// 🔑 ACTIVACIÓN PRO
-// =========================================
-
+// ============================================================================
+// 10. 🔑 ACTIVACIÓN PRO (Sin cambios)
+// ============================================================================
 window.activatePro = async function() {
-    const code = document.getElementById('license-code').value;
-    const statusDiv = document.getElementById('activation-status');
+    const code = document.getElementById('license-code')?.value.trim();
+    const status = document.getElementById('activation-status');
     
     if (!code) {
-        statusDiv.innerHTML = '<div class="status-message error">⚠️ Ingresa un código de licencia</div>';
+        status.innerHTML = '<div class="status-message error">⚠️ Ingresa un código</div>';
         return;
     }
     
-    statusDiv.innerHTML = '<div class="status-message info">⏳ Validando...</div>';
-    
+    status.innerHTML = '<div class="status-message info">⏳ Validando...</div>';
     const result = await activatePro(code);
     
+    status.innerHTML = `<div class="status-message ${result.success ? 'success' : 'error'}">${result.message}</div>`;
+    
     if (result.success) {
-        statusDiv.innerHTML = `<div class="status-message success">${result.message}</div>`;
         setTimeout(() => {
-            statusDiv.innerHTML = '';
-            document.getElementById('license-code').value = '';
-        }, 2000);
-    } else {
-        statusDiv.innerHTML = `<div class="status-message error">${result.message}</div>`;
+            status.innerHTML = '';
+            document.getElementById('license-code').value = '';        }, 2000);
     }
 };
 
 window.deactivatePro = deactivatePro;
-
 window.contactDeveloper = contactDeveloper;
 
-// =========================================
-// 🔍 CÁLCULO Y RESULTADOS
-// =========================================
-
-window.mostrarResultados = function() {
-    // Obtener datos del formulario
+// ============================================================================
+// 11. 🔍 CÁLCULO Y RESULTADOS (ACTUALIZADO: async + nuevos campos)
+// ============================================================================
+window.mostrarResultados = async function() {
+    // Recopilar datos (ahora incluye electrode y diameter)
     const data = {
-        proceso: document.getElementById('process').value,
-        posicion: document.getElementById('position').value,
-        material: document.getElementById('material').value,
-        espesor: parseFloat(document.getElementById('baseThickness').value) || 0,
-        tipoJunta: document.getElementById('position').value.endsWith('F') ? 
-                   'Filete' : document.getElementById('weldingType').value,
-        tamanoSoldadura: document.getElementById('weldSize').value,
-        gap: document.getElementById('position').value.endsWith('F') ?
-             document.getElementById('fileteGap').value :
-             document.getElementById('gap').value || document.getElementById('squareGap').value,
-        angulo: document.getElementById('angle').value,
-        tipoRanura: document.getElementById('grooveType').value,
-        longitud: document.getElementById('weldLength').value
+        proceso: document.getElementById('process')?.value,
+        posicion: document.getElementById('position')?.value,
+        material: document.getElementById('material')?.value,
+        espesor: parseFloat(document.getElementById('baseThickness')?.value) || 0,
+        electrode: document.getElementById('electrode')?.value,      // ← NUEVO
+        diameter: document.getElementById('diameter')?.value,        // ← NUEVO
+        tipoJunta: document.getElementById('position')?.value.endsWith('F') ? 
+                   'Filete' : document.getElementById('weldingType')?.value,
+        tamanoSoldadura: document.getElementById('weldSize')?.value || '00',
+        gap: document.getElementById('position')?.value.endsWith('F') ?
+             document.getElementById('fileteGap')?.value :
+             document.getElementById('gap')?.value || document.getElementById('squareGap')?.value || '0',
+        angulo: document.getElementById('angle')?.value,
+        tipoRanura: document.getElementById('grooveType')?.value,
+        longitud: document.getElementById('weldLength')?.value
     };
     
-    // Calcular todo
-    const results = calcularWPSCompleto(data);
+    // Validación extra para nuevos campos
+    if (!data.electrode || !data.diameter) {
+        showWarning('Selecciona Electrodo y Diámetro para calcular');
+        return;
+    }
     
-    // Mostrar resultados en pantalla
-    displayResults(results, data);
-    
-    // Cambiar a pantalla de resultados
-    document.getElementById('form-screen').style.display = 'none';
-    document.getElementById('result-screen').style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+        // Calcular (ahora es async)
+        const results = await calcularWPSCompleto(data);
+        
+        // Mostrar resultados
+        displayResults(results, data);
+        
+        // Cambiar vista
+        document.getElementById('form-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Post-cálculo
+        window.hasCalculated = true;        showFloatingButtons();
+        saveToHistory(data);
+        incrementCounter('calculate_clicks');
+        
+        // Anuncios post-cálculo (si es FREE)
+        if (localStorage.getItem('wps_pro_active') !== 'true') {
+            setTimeout(() => {
+                if (typeof showPostCalculationAd === 'function') {
+                    showPostCalculationAd();
+                }
+            }, 1500);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error en cálculo:', error);
+        showError('Ocurrió un error calculando. Verifica los datos seleccionados.');
+    }
 };
 
 function displayResults(results, data) {
-    // Código WPS
-    document.getElementById('res-wps-id').textContent = results.wpsCode;
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val || '-';
+    };
     
-    // Configuración
-    document.getElementById('res-process').textContent = data.proceso;
-    document.getElementById('res-position').textContent = data.posicion;
-    document.getElementById('res-material').textContent = data.material;
-    document.getElementById('res-thickness').textContent = data.espesor + ' mm';
-    document.getElementById('res-weld-size').textContent = (data.tamanoSoldadura || '00') + ' mm';
-    document.getElementById('res-weld-type').textContent = data.tipoJunta;
-    document.getElementById('res-gap').textContent = data.gap + ' mm';
-    document.getElementById('res-min-penetration').textContent = results.penMinima;
+    // Configuración básica
+    set('res-wps-id', results.wpsCode || `WPS-${data.proceso}-${Date.now().toString(36).toUpperCase()}`);
+    set('res-process', data.proceso);
+    set('res-position', data.posicion);
+    set('res-material', data.material);
+    set('res-thickness', data.espesor + ' mm');
+    set('res-weld-size', data.tamanoSoldadura + ' mm');
+    set('res-weld-type', data.tipoJunta);
+    set('res-gap', data.gap + ' mm');
     
-    // Mostrar/ocultar campos de ranura
-    document.getElementById('box-groove').style.display = 
-        data.tipoJunta === 'Ranura Bisel' ? 'block' : 'none';
-    document.getElementById('res-groove').textContent = data.tipoRanura || '-';
+    // Campos de ranura (condicionales)
+    const showGroove = data.tipoJunta === 'Ranura Bisel';
+    document.getElementById('box-groove')?.style.setProperty('display', showGroove ? 'block' : 'none');
+    document.getElementById('box-rootface')?.style.setProperty('display', showGroove ? 'block' : 'none');
+    document.getElementById('box-angle')?.style.setProperty('display', showGroove ? 'block' : 'none');
     
-    document.getElementById('box-rootface').style.display = 
-        data.tipoJunta === 'Ranura Bisel' ? 'block' : 'none';
-    document.getElementById('res-rootface').textContent = 
-        (document.getElementById('rootFace').value || '0') + ' mm';
+    set('res-groove', data.tipoRanura || '-');
+    set('res-rootface', (document.getElementById('rootFace')?.value || '0') + ' mm');
+    set('res-angle', results.anguloTotal || '-');
     
-    document.getElementById('box-angle').style.display = 
-        data.tipoJunta === 'Ranura Bisel' ? 'block' : 'none';
-    document.getElementById('res-angle').textContent = results.anguloTotal;
+    // Parámetros eléctricos (manejar WFS vs Amperaje)
+    const p = results.params;
+    set('res-voltage', p.voltage ? `${p.voltage.min}-${p.voltage.max} V` : '-');
     
-    // Parámetros eléctricos
-    const params = results.params;
-    document.getElementById('res-voltage').textContent = 
-        `${params.voltage.min}-${params.voltage.max} V`;
-    document.getElementById('res-amperage').textContent = 
-        `${params.amperage.min}-${params.amperage.max} A`;
-    document.getElementById('res-wfs').textContent = 
-        `${params.wfs.min}-${params.wfs.max} in/min`;
-    document.getElementById('res-travel').textContent = 
-        `${params.travelSpeed.min}-${params.travelSpeed.max} cm/min`;
-    document.getElementById('res-current').textContent = params.current;
-    document.getElementById('res-stickout').textContent = 
-        `${params.stickOut.min}-${params.stickOut.max} mm`;
+    if (p.wfs) {        set('res-wfs', `${p.wfs.min}-${p.wfs.max} in/min`);
+        document.getElementById('res-amperage-row')?.style.setProperty('display', 'none');
+        document.getElementById('res-wfs-row')?.style.setProperty('display', 'block');
+    } else if (p.amperage) {
+        set('res-amperage', `${p.amperage.min}-${p.amperage.max} A`);
+        document.getElementById('res-wfs-row')?.style.setProperty('display', 'none');
+        document.getElementById('res-amperage-row')?.style.setProperty('display', 'block');
+    }
+    
+    set('res-travel', p.travelSpeed ? `${p.travelSpeed.min}-${p.travelSpeed.max} cm/min` : '-');
+    set('res-current', p.current || (p.polarity || '-'));
+    set('res-stickout', p.ctwd ? `${p.ctwd.min}-${p.ctwd.max} mm` : '-');
     
     // Técnicas & Preheat
-    document.getElementById('res-preheat').textContent = results.preheat;
+    set('res-preheat', results.preheat || '-');
     
-    const hiHTML = `Min: ${results.heatInput.min} | Max: ${results.heatInput.max}`;
-    document.getElementById('res-heat-input').innerHTML = hiHTML + results.heatInput.warning;
+    if (results.heatInput) {
+        const hi = typeof results.heatInput === 'object' ? 
+            `Min: ${results.heatInput.min} | Max: ${results.heatInput.max}` : 
+            `${results.heatInput} kJ/mm`;
+        document.getElementById('res-heat-input').innerHTML = hi + (results.heatInput.warning || '');
+    }
     
-    document.getElementById('res-transfer').textContent = 'Cortocircuito / Spray';
-    document.getElementById('res-work-angle').textContent = '90°';
-    document.getElementById('res-travel-angle').textContent = '10°-15° (Empuje)';
+    set('res-transfer', 'Cortocircuito / Spray');
+    set('res-work-angle', '90°');
+    set('res-travel-angle', '10°-15° (Empuje)');
     
-    // Consumibles
-    document.getElementById('res-electrode').textContent = 'Sólido ER70S-6';
-    document.getElementById('res-diameter').textContent = '1.2 mm (0.045")';
-    document.getElementById('res-class').textContent = 'AWS A5.18';
-    document.getElementById('res-gas-type').textContent = 'Mezcla';
-    document.getElementById('res-gas-mix').textContent = 'Ar 90% / CO2 10%';
-    document.getElementById('res-flow').textContent = '35-45 CFH';
+    // Consumibles (usar datos reales del resultado)
+    set('res-electrode', results.electrode || 'ER70S-6');
+    set('res-diameter', data.diameter + ' mm');
+    set('res-class', results.awsSpec || 'AWS A5.18');
+    set('res-gas-type', results.shielding?.includes('Ar') ? 'Mezcla' : (results.shielding || '-'));
+    set('res-gas-mix', results.shielding || '-');
+    set('res-flow', '35-45 CFH');
     
-    // Consumo estimado (si está activado)
-    const showConsumption = document.getElementById('showConsumption').checked;
-    if (showConsumption && results.consumos) {
+    // Consumo estimado
+    const showCons = document.getElementById('showConsumption')?.checked;
+    if (showCons && results.consumos) {
         document.getElementById('consumption-section').style.display = 'block';
-        document.getElementById('res-wire-cons').textContent = 
-            `~${results.consumos.wire.total} kg`;
-        document.getElementById('res-gas-cons').textContent = 
-            `~${results.consumos.gas.total} L`;
+        set('res-wire-cons', `~${results.consumos.wire?.total || 0} kg`);
+        set('res-gas-cons', `~${results.consumos.gas?.total || 0} L`);
     } else {
         document.getElementById('consumption-section').style.display = 'none';
     }
     
-    // Nota técnica
-    if (results.techNote) {
-        document.getElementById('tech-note').innerHTML = results.techNote;
+    // Notas técnicas
+    if (results.notes?.length) {
+        document.getElementById('tech-note').innerHTML = results.notes.map(n => `• ${n}`).join('<br>');
         document.getElementById('tech-note').style.display = 'block';
-    }
-}
+    }}
 
 window.volverFormulario = function() {
     document.getElementById('result-screen').style.display = 'none';
@@ -481,43 +546,125 @@ window.volverFormulario = function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// =========================================
-// 📤 EXPORTACIÓN A PDF
-// =========================================
-
+// ============================================================================
+// 12. 📤 EXPORTACIÓN A PDF (Sin cambios)
+// ============================================================================
 window.exportarPDF = function() {
-    const wpsCode = document.getElementById('res-wps-id').textContent;
+    const wpsCode = document.getElementById('res-wps-id')?.textContent || 'WPS-Documento';
     const originalTitle = document.title;
-    
-    // Poner el código WPS como título del archivo PDF
-    document.title = wpsCode;
-    
-    // Ejecutar impresión (el CSS @media print hará la magia)
+    document.title = wpsCode.replace(/[<>:"/\\|?*\x00-\x1F]/g, '').trim();
     window.print();
-    
-    // Restaurar título
     document.title = originalTitle;
+    incrementCounter('successful_exports');
 };
 
-// =========================================
-// 🔧 UTILIDADES
-// =========================================
-
+// ============================================================================
+// 13. 🔧 UTILIDADES (Sin cambios)
+// ============================================================================
 window.validateFileteGap = function() {
-    const gap = parseFloat(document.getElementById('fileteGap').value);
+    const gap = parseFloat(document.getElementById('fileteGap')?.value);
     const warning = document.getElementById('gapWarning');
     const input = document.getElementById('fileteGap');
     
     if (!isNaN(gap) && gap > 5) {
-        warning.style.display = 'block';
-        input.classList.add('warning-input');
+        warning?.style.setProperty('display', 'block');
+        input?.classList.add('warning-input');
     } else {
-        warning.style.display = 'none';
-        input.classList.remove('warning-input');
+        warning?.style.setProperty('display', 'none');
+        input?.classList.remove('warning-input');
     }
 };
 
 window.toggleConsumptionFields = function() {
-    const show = document.getElementById('showConsumption').checked;
+    const show = document.getElementById('showConsumption')?.checked;
     document.getElementById('consumptionInputs').style.display = show ? 'block' : 'none';
 };
+
+// ============================================================================
+// 14. 📜 HISTORIAL LOCAL (Sin cambios)
+// ============================================================================
+function saveToHistory(data) {
+    let h = JSON.parse(localStorage.getItem('wps_calc_history') || '[]');
+    h.unshift({ ...data, date: new Date().toLocaleString('es-ES') });
+    if (h.length > 5) h.pop();    localStorage.setItem('wps_calc_history', JSON.stringify(h));
+}
+
+window.loadHistory = function() {
+    const h = JSON.parse(localStorage.getItem('wps_calc_history') || '[]');
+    const list = document.getElementById('history-list');
+    if (!list) return;
+    
+    list.innerHTML = h.length === 0 ? 
+        '<p style="text-align:center;color:var(--muted);padding:20px;">📭 Sin cálculos recientes</p>' :
+        h.map((x, i) => `
+            <div class="history-item" onclick="applyHistory(${i})">
+                <span>${x.wpsCode || 'WPS'} - ${x.material} ${x.espesor}mm</span>
+                <small>${x.date}</small>
+            </div>
+        `).join('');
+    
+    document.getElementById('history-modal').style.display = 'flex';
+};
+
+window.applyHistory = function(i) {
+    const h = JSON.parse(localStorage.getItem('wps_calc_history') || '[]')[i];
+    if (!h) return;
+    
+    // Restaurar valores básicos
+    ['process', 'baseThickness', 'position', 'material'].forEach(field => {
+        if (document.getElementById(field) && h[field]) {
+            document.getElementById(field).value = h[field];
+        }
+    });
+    
+    updateFormLogic();
+    closeModal('history-modal');
+    mostrarResultados();
+};
+
+// ============================================================================
+// 15. ☕ BOTONES FLOTANTES (Sin cambios)
+// ============================================================================
+function showFloatingButtons() {
+    document.getElementById('coffee-btn')?.classList.add('visible');
+    document.getElementById('community-float-btn')?.classList.add('visible');
+}
+
+window.openCoffeeModal = function() { 
+    incrementCounter('coffee_clicks'); 
+    document.getElementById('coffee-modal').style.display = 'flex'; 
+};
+
+// ============================================================================// 16. 🔧 MODALES & HELPERS (Sin cambios)
+// ============================================================================
+window.closeModal = function(id) { 
+    document.getElementById(id).style.display = 'none'; 
+};
+window.closeLogoutModal = () => closeModal('logoutModal');
+window.confirmLogout = function() { 
+    closeModal('logoutModal'); 
+    deactivatePro(); 
+    location.reload(); 
+};
+
+// ============================================================================
+// 17. 📊 ANALYTICS FIREBASE (Sin cambios)
+// ============================================================================
+import { db, doc, setDoc, getDoc } from './firebase-config.js';
+
+async function incrementCounter(key) {
+    if (!navigator.onLine) return;
+    try {
+        const ref = doc(db, 'analytics', 'global_stats');
+        const snap = await getDoc(ref);
+        let cur = snap.exists() ? snap.data()[key] || 0 : 0;
+        await setDoc(ref, { [key]: cur + 1, lastUpdated: new Date().toISOString() }, { merge: true });
+    } catch (e) { console.warn('⚠️ Contador offline:', e); }
+}
+
+function trackNewDevice() {
+    if (!localStorage.getItem('wps_first_visit')) {
+        localStorage.setItem('wps_first_visit', 'true');
+        incrementCounter('new_devices');
+    }
+}

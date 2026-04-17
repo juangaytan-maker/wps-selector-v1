@@ -27,6 +27,8 @@ import {
 // Importar el manager de anuncios
 import { initAds } from './ads-manager.js';
 
+import { WPSData } from './data-manager.js';
+
 // ... dentro de tu document.addEventListener('DOMContentLoaded', () => {
     initProSystem();
     initAds(); // <--- AGREGA ESTA LÍNEA AQUÍ
@@ -45,6 +47,7 @@ const FREE_PROCESSES = ['GMAW'];
 // =========================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    await WPSData.load();
     initProSystem();
     initAds();
     setupEventListeners();
